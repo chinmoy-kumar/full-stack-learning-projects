@@ -1,23 +1,52 @@
 import { X } from "lucide-react";
 import { useState } from "react";
+import { getGeoLocation } from "../services/get-geolocaiton";
+import { useNavigate } from "react-router";
 
 const LocationModals = ({ close }) => {
+  const navigate = useNavigate();
   const [city, setCity] = useState("");
-  const handleSubmit = (e) => {
+  const [error, setError] = useState("");
+
+  const goToPage = (location) => {
+    navigate("/weatherDetails", { state: { location } });
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(city);
+    const value = city.trim();
+    // console.log(value);
+    if (!value) {
+      setError("Please enter a city name");
+      return;
+    }
+    try {
+      const location = await getGeoLocation(value);
+      // console.log(result)
+      if (!location) {
+        setError("Geolocation request failed!");
+      }
+      goToPage(location);
+    } catch (error) {
+      setError(error);
+    }
   };
 
   const handleGeoLocation = () => {
-    navigator.geolocation.getCurrentPosition((positions) => {
-      const {latitude, longitude} = positions.coords;
-      console.log({latitude, longitude})
-    }, (error) => {
-      console.log(error);
-    },{
-      timeout: 10000
-    })
-  }
+    navigator.geolocation.getCurrentPosition(
+      (positions) => {
+        const { latitude, longitude } = positions.coords;
+        // console.log({latitude, longitude})
+        goToPage({ name: "Your locations", lat: latitude, long: longitude });
+      },
+      (error) => {
+        setError("Please turn on location permission");
+      },
+      {
+        timeout: 10000,
+      },
+    );
+  };
 
   return (
     <div className="fixed inset-0 flex justify-center items-center bg-gray-700/60">
@@ -45,9 +74,9 @@ const LocationModals = ({ close }) => {
               Get Weather
             </button>
           </form>
-          
+
           <div className="pt-2 pb-2 text-xl">or</div>
-          
+
           <button
             type="button"
             className="bg-blue-500 text-gray-100 px-6 py-3 w-full rounded-4xl text-lg hover:scale-105 transition-all delay-100 cursor-pointer"
@@ -56,6 +85,9 @@ const LocationModals = ({ close }) => {
             Use my location
           </button>
         </div>
+        
+        {error && <p className="text-red-600 font-bold text-center mt-2">{error}</p>}
+
       </div>
     </div>
   );
